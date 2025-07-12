@@ -162,6 +162,12 @@
     startBtn.addEventListener('click', startRecording);
     stopBtn.addEventListener('click', stopRecording);
     navigator.mediaDevices.getUserMedia({ audio: true }).then(listMicrophones);
+
+          let wakeLock = null;
+if ('wakeLock' in navigator) {
+  navigator.wakeLock.request('screen').then(lock => wakeLock = lock);
+}
+    
   </script>
 </body>
 </html>
