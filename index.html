@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Bluetooth Mic Recorder + Waveform</title>
+  <meta charset="UTF-8">
+  <title>Bluetooth Mic Recorder + Output Device Selector</title>
   <style>
     body {
-      background: #121212;
+      background: #0b0b0b;
       color: #fff;
       font-family: Arial, sans-serif;
       padding: 20px;
@@ -13,7 +13,7 @@
     select, button {
       padding: 10px;
       margin: 10px 5px;
-      background: #1e1e1e;
+      background: #222;
       color: #fff;
       border: 1px solid #555;
       border-radius: 5px;
@@ -23,22 +23,19 @@
       height: 150px;
       margin-top: 20px;
       border: 1px solid #444;
-      background: #000;
-    }
-    a.download-link {
-      display: block;
-      margin-top: 20px;
-      color: #0f0;
-      font-weight: bold;
+      background: black;
     }
   </style>
 </head>
 <body>
-  <h2>🎧 Bluetooth Mic Live Recorder + Waveform</h2>
-  <p>Choose your Bluetooth mic, click start, speak and you'll see the waveform. Audio will be recorded too.</p>
+  <h2>🎧 Bluetooth Mic Monitor & Recorder</h2>
+  <p>Select your Bluetooth mic and output speaker. Click "Start" to begin monitoring & recording.</p>
 
-  <label for="micSelect">🎙 Select Microphone:</label>
+  <label for="micSelect">🎙 Microphone:</label>
   <select id="micSelect"></select><br>
+
+  <label for="outputSelect">🔊 Output Speaker:</label>
+  <select id="outputSelect"></select><br>
 
   <button id="startBtn">▶️ Start</button>
   <button id="stopBtn" disabled>⏹️ Stop & Download</button>
@@ -47,84 +44,31 @@
 
   <script>
     const micSelect = document.getElementById('micSelect');
+    const outputSelect = document.getElementById('outputSelect');
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const canvas = document.getElementById('waveCanvas');
     const canvasCtx = canvas.getContext('2d');
 
-    let audioContext, analyser, micStream, mediaRecorder;
+    let mediaRecorder, audioContext, micStream, analyser;
     let recordedChunks = [];
-    let animationFrame;
+    let drawId;
+    let audioOutput; // HTMLAudioElement for speaker routing
 
-    async function listMicrophones() {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        micSelect.innerHTML = '';
-        devices
-          .filter(device => device.kind === 'audioinput')
-          .forEach(device => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.textContent = device.label || `Mic ${device.deviceId}`;
-            micSelect.appendChild(option);
-          });
-      } catch (e) {
-        alert("Microphone access denied or not supported.");
-      }
-    }
+    async function listDevices() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
 
-    async function startRecording() {
-      const selectedDeviceId = micSelect.value;
+      micSelect.innerHTML = '';
+      outputSelect.innerHTML = '';
 
-      try {
-        micStream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined }
-        });
+      devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || `${device.kind} ${device.deviceId}`;
 
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const source = audioContext.createMediaStreamSource(micStream);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048;
-        source.connect(analyser);
-        source.connect(audioContext.destination); // Live monitor
-
-        drawWaveform();
-
-        mediaRecorder = new MediaRecorder(micStream);
-        recordedChunks = [];
-
-        mediaRecorder.ondataavailable = e => {
-          if (e.data.size > 0) recordedChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'bluetooth-mic-recording.webm';
-          link.textContent = '⬇️ Download Recording';
-          link.className = 'download-link';
-          document.body.appendChild(link);
-        };
-
-        mediaRecorder.start(200);
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-
-      } catch (err) {
-        alert("Error accessing microphone. Ensure HTTPS and microphone permissions are allowed.");
-        console.error(err);
-      }
-    }
-
-    function stopRecording() {
-      mediaRecorder.stop();
-      micStream.getTracks().forEach(track => track.stop());
-      if (audioContext) audioContext.close();
-      cancelAnimationFrame(animationFrame);
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
+        if (device.kind === 'audioinput') micSelect.appendChild(option);
+        if (device.kind === 'audiooutput') outputSelect.appendChild(option);
+      });
     }
 
     function drawWaveform() {
@@ -132,26 +76,24 @@
       const dataArray = new Uint8Array(bufferLength);
 
       function draw() {
-        animationFrame = requestAnimationFrame(draw);
+        drawId = requestAnimationFrame(draw);
         analyser.getByteTimeDomainData(dataArray);
 
-        canvasCtx.fillStyle = '#000';
+        canvasCtx.fillStyle = 'black';
         canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
         canvasCtx.lineWidth = 2;
-        canvasCtx.strokeStyle = '#0f0';
+        canvasCtx.strokeStyle = 'lime';
         canvasCtx.beginPath();
 
         const sliceWidth = canvas.width / bufferLength;
         let x = 0;
-
         for (let i = 0; i < bufferLength; i++) {
           const v = dataArray[i] / 128.0;
           const y = v * canvas.height / 2;
           i === 0 ? canvasCtx.moveTo(x, y) : canvasCtx.lineTo(x, y);
           x += sliceWidth;
         }
-
         canvasCtx.lineTo(canvas.width, canvas.height / 2);
         canvasCtx.stroke();
       }
@@ -159,15 +101,82 @@
       draw();
     }
 
-    startBtn.addEventListener('click', startRecording);
-    stopBtn.addEventListener('click', stopRecording);
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(listMicrophones);
+    async function startRecording() {
+      const micId = micSelect.value;
+      const outputId = outputSelect.value;
 
-          let wakeLock = null;
-if ('wakeLock' in navigator) {
-  navigator.wakeLock.request('screen').then(lock => wakeLock = lock);
-}
-    
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: micId } }
+      });
+
+      // Web Audio Setup
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(micStream);
+
+      // Create analyser
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+
+      // Create destination node
+      const destination = audioContext.createMediaStreamDestination();
+      source.connect(destination);
+
+      // Create audio element to play output
+      audioOutput = new Audio();
+      audioOutput.srcObject = destination.stream;
+      audioOutput.autoplay = true;
+
+      // Set custom output speaker
+      if (typeof audioOutput.setSinkId === 'function') {
+        try {
+          await audioOutput.setSinkId(outputId);
+        } catch (err) {
+          alert('Error setting speaker output: ' + err);
+        }
+      }
+
+      drawWaveform();
+
+      // Start Recording
+      mediaRecorder = new MediaRecorder(micStream);
+      recordedChunks = [];
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'recording.webm';
+        a.textContent = '⬇️ Download Recording';
+        a.style.display = 'block';
+        document.body.appendChild(a);
+      };
+
+      mediaRecorder.start(200);
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    }
+
+    function stopRecording() {
+      mediaRecorder.stop();
+      micStream.getTracks().forEach(t => t.stop());
+      if (audioContext) audioContext.close();
+      if (drawId) cancelAnimationFrame(drawId);
+
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+
+    startBtn.onclick = startRecording;
+    stopBtn.onclick = stopRecording;
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(listDevices);
+    navigator.mediaDevices.addEventListener('devicechange', listDevices);
   </script>
 </body>
 </html>
