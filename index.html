@@ -1,46 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Bluetooth Mic Recorder + Output Device Selector</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🟢 Hacker Mic Recorder</title>
   <style>
-    body {
-      background: #0b0b0b;
-      color: #fff;
-      font-family: Arial, sans-serif;
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      color: #00ff00;
+      font-family: 'Courier New', monospace;
+    }
+    .container {
       padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h2 {
+      color: #0f0;
+      text-align: center;
+      text-shadow: 0 0 5px #0f0;
+    }
+    p {
+      color: #6f6;
+      text-align: center;
     }
     select, button {
-      padding: 10px;
-      margin: 10px 5px;
-      background: #222;
-      color: #fff;
-      border: 1px solid #555;
-      border-radius: 5px;
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: #000;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      text-shadow: 0 0 3px #0f0;
+    }
+    select:focus, button:focus {
+      outline: none;
+      box-shadow: 0 0 10px #0f0;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     canvas {
       width: 100%;
       height: 150px;
+      background: #000;
+      border: 1px solid #0f0;
       margin-top: 20px;
-      border: 1px solid #444;
-      background: black;
+      display: block;
+    }
+    a.download-link {
+      color: #0f0;
+      display: block;
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+      text-shadow: 0 0 4px #0f0;
     }
   </style>
 </head>
 <body>
-  <h2>🎧 Bluetooth Mic Monitor & Recorder</h2>
-  <p>Select your Bluetooth mic and output speaker. Click "Start" to begin monitoring & recording.</p>
+  <div class="container">
+    <h2>🟢 Bluetooth Mic Monitor & Recorder</h2>
+    <p>Choose your mic and output. Speak and see the waveform live. Record and download audio.</p>
 
-  <label for="micSelect">🎙 Microphone:</label>
-  <select id="micSelect"></select><br>
+    <label for="micSelect">🎙 Microphone:</label>
+    <select id="micSelect"></select>
 
-  <label for="outputSelect">🔊 Output Speaker:</label>
-  <select id="outputSelect"></select><br>
+    <label for="outputSelect">🔊 Output Speaker:</label>
+    <select id="outputSelect"></select>
 
-  <button id="startBtn">▶️ Start</button>
-  <button id="stopBtn" disabled>⏹️ Stop & Download</button>
+    <button id="startBtn">▶️ Start</button>
+    <button id="stopBtn" disabled>⏹️ Stop & Download</button>
 
-  <canvas id="waveCanvas" width="800" height="150"></canvas>
+    <canvas id="waveCanvas" width="800" height="150"></canvas>
+  </div>
+
 
   <script>
     const micSelect = document.getElementById('micSelect');
